@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PsycheScope — Personality Analyzer</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --ink: #1a1a2e;
+    --paper: #f5f0e8;
+    --accent: #c84b31;
+    --gold: #d4a853;
+    --muted: #8a8070;
+    --card: #fdfaf5;
+    --border: #e0d8cc;
+    --bubble-user: #1a1a2e;
+    --bubble-ai: #fdfaf5;
+  }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 300;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background-image:
+      radial-gradient(ellipse at 10% 20%, rgba(200,75,49,0.06) 0%, transparent 50%),
+      radial-gradient(ellipse at 90% 80%, rgba(212,168,83,0.08) 0%, transparent 50%);
+  }
+
+  /* ── Header ── */
+  header {
+    width: 100%;
+    max-width: 720px;
+    padding: 2.5rem 2rem 1.5rem;
+    text-align: center;
+    animation: fadeDown 0.8s ease both;
+  }
+
+  .logo {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(2rem, 5vw, 3rem);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+  }
+
+  .logo span {
+    color: var(--accent);
+  }
+
+  .tagline {
+    font-size: 0.85rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 0.3rem;
+  }
+
+  .header-rule {
+    width: 48px;
+    height: 2px;
+    background: var(--gold);
+    margin: 1rem auto 0;
+  }
+
+  /* ── Chat window ── */
+  #chat-window {
+    width: 100%;
+    max-width: 720px;
+    flex: 1;
+    padding: 1rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+    min-height: 60vh;
+  }
+
+  /* ── Message bubbles ── */
+  .msg {
+    display: flex;
+    gap: 0.75rem;
+    animation: riseIn 0.45s cubic-bezier(.22,.68,0,1.2) both;
+  }
+
+  .msg.user { flex-direction: row-reverse; }
+
+  .avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    margin-top: 2px;
+  }
+
+  .avatar.ai {
+    background: var(--ink);
+    color: var(--paper);
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-size: 1rem;
+  }
+
+  .avatar.user-av {
+    background: var(--accent);
+    color: white;
+    font-size: 0.7rem;
+  }
+
+  .bubble {
+    max-width: 85%;
+    padding: 1rem 1.25rem;
+    border-radius: 18px;
+    font-size: 0.95rem;
+    line-height: 1.7;
+    border: 1px solid transparent;
+  }
+
+  .msg.ai .bubble {
+    background: var(--bubble-ai);
+    border-color: var(--border);
+    border-bottom-left-radius: 4px;
+    color: var(--ink);
+  }
+
+  .msg.user .bubble {
+    background: var(--bubble-user);
+    color: var(--paper);
+    border-bottom-right-radius: 4px;
+  }
+
+  /* ── Typing indicator ── */
+  .typing-dots {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    padding: 0.4rem 0;
+  }
+
+  .typing-dots span {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--muted);
+    animation: bounce 1.2s infinite;
+  }
+
+  .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+  .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+  /* ── Trait cards ── */
+  .trait-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    margin-top: 1rem;
+  }
+
+  .trait-card {
+    background: var(--paper);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 0.9rem 1rem;
+    animation: riseIn 0.5s ease both;
+  }
+
+  .trait-card:nth-child(1) { animation-delay: 0.05s; }
+  .trait-card:nth-child(2) { animation-delay: 0.10s; }
+  .trait-card:nth-child(3) { animation-delay: 0.15s; }
+  .trait-card:nth-child(4) { animation-delay: 0.20s; }
+  .trait-card:nth-child(5) { animation-delay: 0.25s; }
+
+  .trait-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.4rem;
+  }
+
+  .trait-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 0.95rem;
+    font-weight: 700;
+  }
+
+  .trait-badge {
+    font-size: 0.65rem;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 20px;
+  }
+
+  .badge-high { background: #d4f0db; color: #1e6b37; }
+  .badge-low  { background: #fde8e4; color: #a0321e; }
+
+  .trait-bar-bg {
+    height: 5px;
+    background: var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 0.5rem 0;
+  }
+
+  .trait-bar-fill {
+    height: 100%;
+    border-radius: 10px;
+    transition: width 1.2s cubic-bezier(.22,.68,0,1.2);
+    width: 0%;
+  }
+
+  .fill-high { background: linear-gradient(90deg, #3b8bd4, #1e6b37); }
+  .fill-mid  { background: linear-gradient(90deg, #d4a853, #c84b31); }
+  .fill-low  { background: linear-gradient(90deg, #c84b31, #8a2010); }
+
+  .trait-pct {
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-bottom: 0.4rem;
+  }
+
+  .trait-desc {
+    font-size: 0.8rem;
+    line-height: 1.55;
+    color: var(--muted);
+    border-top: 1px solid var(--border);
+    padding-top: 0.5rem;
+    margin-top: 0.35rem;
+  }
+
+  /* ── Summary section ── */
+  .summary-box {
+    background: var(--ink);
+    color: var(--paper);
+    border-radius: 14px;
+    padding: 1.2rem 1.4rem;
+    margin-top: 1rem;
+    font-size: 0.88rem;
+    line-height: 1.75;
+  }
+
+  .summary-box h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--gold);
+    margin-bottom: 0.6rem;
+    letter-spacing: 0.02em;
+  }
+
+  .strengths-list {
+    margin-top: 0.8rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+
+  .strength-tag {
+    background: rgba(212,168,83,0.15);
+    color: var(--gold);
+    border: 1px solid rgba(212,168,83,0.3);
+    border-radius: 20px;
+    padding: 3px 10px;
+    font-size: 0.75rem;
+    font-weight: 400;
+  }
+
+  /* ── Input area ── */
+  #input-area {
+    width: 100%;
+    max-width: 720px;
+    padding: 1rem 1.5rem 2rem;
+    animation: fadeUp 0.6s 0.5s ease both;
+  }
+
+  .input-wrapper {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    overflow: hidden;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  .input-wrapper:focus-within {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(200,75,49,0.1);
+  }
+
+  #user-input {
+    width: 100%;
+    border: none;
+    outline: none;
+    background: transparent;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.92rem;
+    font-weight: 300;
+    color: var(--ink);
+    padding: 1rem 1.2rem 0.5rem;
+    resize: none;
+    min-height: 60px;
+    max-height: 180px;
+    line-height: 1.6;
+  }
+
+  #user-input::placeholder { color: var(--muted); }
+
+  .input-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 1rem 0.75rem;
+  }
+
+  .char-hint {
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+
+  #send-btn {
+    background: var(--ink);
+    color: var(--paper);
+    border: none;
+    border-radius: 10px;
+    padding: 0.5rem 1.2rem;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  #send-btn:hover { background: var(--accent); }
+  #send-btn:active { transform: scale(0.97); }
+  #send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* ── Quote / intro styling ── */
+  .intro-quote {
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-size: 1.1rem;
+    line-height: 1.8;
+    color: var(--ink);
+    border-left: 3px solid var(--gold);
+    padding-left: 1rem;
+    margin: 0.8rem 0;
+  }
+
+  .ocean-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-top: 0.8rem;
+  }
+
+  .ocean-pill {
+    background: var(--paper);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: 0.78rem;
+    color: var(--ink);
+    font-weight: 500;
+  }
+
+  /* ── Animations ── */
+  @keyframes fadeDown {
+    from { opacity: 0; transform: translateY(-16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes riseIn {
+    from { opacity: 0; transform: translateY(14px) scale(0.98); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  @keyframes bounce {
+    0%, 60%, 100% { transform: translateY(0); }
+    30%            { transform: translateY(-5px); }
+  }
+
+  /* ── Reset button ── */
+  .reset-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    border-radius: 8px;
+    padding: 0.35rem 0.9rem;
+    font-size: 0.78rem;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    transition: all 0.2s;
+  }
+  .reset-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* scrollbar */
+  #chat-window::-webkit-scrollbar { width: 4px; }
+  #chat-window::-webkit-scrollbar-track { background: transparent; }
+  #chat-window::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Psyche<span>Scope</span></div>
+  <div class="tagline">Personality Intelligence · Big Five Analysis</div>
+  <div class="header-rule"></div>
+</header>
+
+<div id="chat-window"></div>
+
+<div id="input-area">
+  <div class="input-wrapper">
+    <textarea id="user-input" placeholder="Write anything — a few sentences about your day, your thoughts, your feelings..." rows="2"></textarea>
+    <div class="input-footer">
+      <span class="char-hint" id="char-count">0 words</span>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button class="reset-btn" onclick="resetChat()">↺ Reset</button>
+        <button id="send-btn" onclick="handleSend()">Analyze ↗</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─────────────────────────────────────────────
+//  NLP ENGINE  (Celli 2013 inspired features)
+// ─────────────────────────────────────────────
+
+const POSITIVE_WORDS = new Set(["happy","joy","love","great","excellent","wonderful","beautiful","fantastic","good","nice","amazing","brilliant","excited","enjoy","fun","laugh","smile","hope","best","perfect","glad","awesome","positive","creative","curious","kind","helpful","friendly","lively","cheerful","delightful","grateful","inspired","motivated","enthusiastic","vibrant","energetic","warm","caring","generous","optimistic","peaceful","content","proud","thrilled","successful","achieve","win","bright","clear","free","open","honest","strong","confident","adventurous"]);
+
+const NEGATIVE_WORDS = new Set(["sad","bad","hate","terrible","awful","horrible","worst","angry","fear","stress","worry","depressed","anxious","nervous","lonely","bored","tired","hurt","pain","cry","fail","loss","ugly","weak","negative","boring","lazy","dull","frustrating","difficult","angry","upset","miserable","hopeless","exhausted","overwhelmed","confused","stuck","trapped","dark","heavy","empty","broken","lost","regret","shame","guilt","doubt","scared","helpless","worthless","alone","bitter","cold","hard","problem","struggle","avoid","escape","hide"]);
+
+const FIRST_PERSON = new Set(["i","me","my","myself","mine","i'm","i've","i'll","i'd","i'd"]);
+
+function extractFeatures(text) {
+  const raw = text;
+  const clean = text.toLowerCase().replace(/<[^>]+>/g,' ').replace(/[^a-z\s!?.,]/g,' ').replace(/\s+/g,' ').trim();
+  const words = clean.split(' ').filter(w => w.length > 0);
+  const sentences = raw.split(/[.!?]+/).filter(s => s.trim().length > 0);
+
+  const totalWords    = words.length || 1;
+  const totalSentences= sentences.length || 1;
+
+  const avgWordLen    = words.reduce((a,w)=>a+w.length,0) / totalWords;
+  const uniqueWords   = new Set(words).size;
+  const ttr           = uniqueWords / totalWords;
+  const firstPerson   = words.filter(w => FIRST_PERSON.has(w)).length / totalWords;
+  const exclamations  = (raw.match(/!/g)||[]).length / totalSentences;
+  const questions     = (raw.match(/\?/g)||[]).length / totalSentences;
+  const positiveR     = words.filter(w => POSITIVE_WORDS.has(w)).length / totalWords;
+  const negativeR     = words.filter(w => NEGATIVE_WORDS.has(w)).length / totalWords;
+  const commaR        = (raw.match(/,/g)||[]).length / totalSentences;
+  const punctR        = (raw.match(/[.,;:!?]/g)||[]).length / totalWords;
+  const avgSentLen    = totalWords / totalSentences;
+  const capsRatio     = (raw.match(/[A-Z]/g)||[]).length / (raw.length || 1);
+
+  return { totalWords, avgWordLen, ttr, firstPerson, exclamations, questions,
+           positiveR, negativeR, commaR, punctR, avgSentLen, capsRatio, totalSentences };
+}
+
+function scoreTraits(f) {
+  // Each score 0-100, calibrated to Celli (2013) correlates
+  let O = 50, C = 50, E = 50, A = 50, N = 50;
+
+  // OPENNESS — vocabulary richness, sentence complexity, positive curiosity
+  O += (f.ttr - 0.5) * 120;
+  O += (f.avgWordLen - 4.5) * 8;
+  O += f.positiveR * 80;
+  O += (f.avgSentLen - 12) * 1.5;
+
+  // CONSCIENTIOUSNESS — organized writing, commas, lower negativity, less 1st-person
+  C += (f.commaR - 1.5) * 12;
+  C += (f.punctR - 0.08) * 60;
+  C -= f.negativeR * 60;
+  C -= (f.firstPerson - 0.05) * 80;
+  C += (f.avgSentLen - 10) * 1.2;
+
+  // EXTRAVERSION — exclamations, positive words, longer texts, caps energy
+  E += f.exclamations * 28;
+  E += f.positiveR * 90;
+  E += (f.totalWords - 60) * 0.18;
+  E += f.capsRatio * 120;
+  E -= (f.firstPerson - 0.06) * 30;
+
+  // AGREEABLENESS — positive words, low negativity, cooperative tone
+  A += f.positiveR * 100;
+  A -= f.negativeR * 80;
+  A += (f.ttr - 0.4) * 40;
+  A -= f.exclamations * 5;
+  A += (f.avgWordLen - 4.0) * 5;
+
+  // NEUROTICISM — first-person, negative words, questions (self-doubt), short bursts
+  N += (f.firstPerson - 0.04) * 180;
+  N += f.negativeR * 130;
+  N += f.questions * 14;
+  N -= f.positiveR * 70;
+  N -= (f.avgSentLen - 8) * 1.8;
+
+  const clamp = v => Math.min(95, Math.max(12, Math.round(v)));
+  return { O: clamp(O), C: clamp(C), E: clamp(E), A: clamp(A), N: clamp(N) };
+}
+
+// ─────────────────────────────────────────────
+//  TRAIT DESCRIPTIONS
+// ─────────────────────────────────────────────
+
+const TRAIT_META = {
+  O: {
+    name: "Openness",
+    full: "Openness to Experience",
+    high: {
+      label: "Creative Explorer",
+      desc: "You are intellectually curious and deeply imaginative. You love exploring new ideas, art, and abstract thinking. Your writing suggests a mind that thrives on novelty and embraces complexity.",
+      strengths: ["Creative thinking","Intellectual curiosity","Open-mindedness","Artistic sensitivity","Love of learning"],
+      career: "You thrive in creative, research-oriented, or innovative environments — design, writing, academia, science.",
+      relationship: "You bring wonder and fresh perspectives to your relationships. You enjoy deep, philosophical conversations.",
+      watchout: "You may sometimes struggle with routine tasks or feel restless in structured environments."
+    },
+    low: {
+      label: "Grounded Realist",
+      desc: "Your writing reflects a practical, conventional mindset. You prefer the familiar and value reliability over experimentation. You are straightforward and down-to-earth.",
+      strengths: ["Practicality","Reliability","Consistency","Focus on the concrete","Clear communication"],
+      career: "You excel in structured, process-driven environments — operations, administration, finance, engineering.",
+      relationship: "You offer stability and dependability in relationships. People know exactly what to expect from you.",
+      watchout: "You may sometimes resist change or new ideas that could be beneficial."
+    }
+  },
+  C: {
+    name: "Conscientiousness",
+    full: "Conscientiousness",
+    high: {
+      label: "Diligent Achiever",
+      desc: "Your writing is structured and deliberate, revealing a highly organized, disciplined personality. You set goals and pursue them with dedication. Planning and reliability come naturally to you.",
+      strengths: ["Organization","Self-discipline","Goal-setting","Reliability","Attention to detail"],
+      career: "You are a natural in roles demanding precision — project management, medicine, law, research, finance.",
+      relationship: "You are the dependable partner or friend who always follows through. People trust you deeply.",
+      watchout: "Perfectionism may cause unnecessary stress. Learning to embrace 'good enough' can be liberating."
+    },
+    low: {
+      label: "Free-Spirited",
+      desc: "Your writing suggests a flexible, spontaneous personality. You prefer to live in the moment rather than plan meticulously. You adapt easily and enjoy freedom from rigid structures.",
+      strengths: ["Spontaneity","Flexibility","Adaptability","Big-picture thinking","Creativity under pressure"],
+      career: "You thrive in dynamic, fast-changing environments — startups, creative industries, emergency response.",
+      relationship: "You bring energy and unpredictability to relationships, keeping things exciting and fresh.",
+      watchout: "Developing basic organizational habits can significantly amplify your natural talents."
+    }
+  },
+  E: {
+    name: "Extraversion",
+    full: "Extraversion",
+    high: {
+      label: "Social Dynamo",
+      desc: "Your writing buzzes with energy and enthusiasm. You are outgoing, expressive, and genuinely energized by social interaction. You think out loud and feel most alive around others.",
+      strengths: ["Charisma","Natural leadership","Enthusiasm","Network building","Positive energy"],
+      career: "You shine in sales, leadership, teaching, entertainment, public relations, or any people-facing role.",
+      relationship: "You are warm, engaging, and fun to be around. You build connections quickly and deeply.",
+      watchout: "Solitude and deep listening are skills worth cultivating — not every moment needs to be filled."
+    },
+    low: {
+      label: "Reflective Introvert",
+      desc: "Your writing reveals a thoughtful, introspective mind. You recharge through solitude and deep focus. You prefer meaningful one-on-one connections over large social settings.",
+      strengths: ["Deep thinking","Active listening","Focus","Independence","Meaningful relationships"],
+      career: "You excel in research, writing, programming, data analysis, counseling, and roles requiring deep focus.",
+      relationship: "Your connections are deep and meaningful. You are a loyal, attentive, and thoughtful partner.",
+      watchout: "Stepping outside your comfort zone socially can open doors you never expected."
+    }
+  },
+  A: {
+    name: "Agreeableness",
+    full: "Agreeableness",
+    high: {
+      label: "Warm Harmonizer",
+      desc: "Your language is kind, cooperative, and positive. You genuinely care about others and prioritize harmony. Your writing shows empathy, compassion, and a desire to connect warmly.",
+      strengths: ["Empathy","Compassion","Cooperation","Trustworthiness","Conflict resolution"],
+      career: "You are exceptional in healthcare, counseling, education, social work, HR, and team-based roles.",
+      relationship: "You are the glue in your relationships — understanding, patient, and deeply caring.",
+      watchout: "Learning to set healthy boundaries protects your wellbeing while maintaining your kindness."
+    },
+    low: {
+      label: "Direct Challenger",
+      desc: "Your writing suggests a straightforward, competitive personality. You are direct, skeptical of others' motives, and value honesty over comfort. You are not afraid to disagree.",
+      strengths: ["Directness","Skeptical thinking","Independence","Negotiation skills","Honesty"],
+      career: "You thrive in negotiations, competitive business, law, politics, and roles requiring assertiveness.",
+      relationship: "You bring honesty and realness to relationships. People always know where they stand with you.",
+      watchout: "Softening your delivery without changing your message can significantly improve your relationships."
+    }
+  },
+  N: {
+    name: "Neuroticism",
+    full: "Emotional Stability",
+    high: {
+      label: "Sensitive Soul",
+      desc: "Your writing shows deep emotional sensitivity and introspection. You experience emotions intensely and are highly attuned to your inner world. This depth of feeling, while challenging, is also a great source of empathy and creativity.",
+      strengths: ["Emotional depth","Empathy","Introspection","Sensitivity to nuance","Passionate engagement"],
+      career: "Your emotional intelligence is an asset in therapy, arts, writing, caregiving, and human-centered design.",
+      relationship: "You feel deeply and love intensely. Your emotional availability makes others feel truly seen.",
+      watchout: "Stress management techniques like mindfulness and journaling can help channel emotional intensity constructively."
+    },
+    low: {
+      label: "Emotionally Resilient",
+      desc: "Your writing reflects emotional stability and calm under pressure. You don't dwell on negative emotions and recover quickly from setbacks. You are level-headed and composed even in challenging situations.",
+      strengths: ["Emotional stability","Resilience","Calmness","Rational decision-making","Consistent performance"],
+      career: "You thrive in high-pressure roles — surgery, aviation, military, crisis management, executive leadership.",
+      relationship: "Your stability is a calming anchor for those around you. You handle conflict with remarkable composure.",
+      watchout: "Staying attuned to your own emotional needs ensures your resilience doesn't become emotional distance."
+    }
+  }
+};
+
+// ─────────────────────────────────────────────
+//  CHAT STATE & UI
+// ─────────────────────────────────────────────
+
+let analysisCount = 0;
+const chatWindow = document.getElementById('chat-window');
+const userInput  = document.getElementById('user-input');
+const sendBtn    = document.getElementById('send-btn');
+
+userInput.addEventListener('input', () => {
+  const words = userInput.value.trim().split(/\s+/).filter(w=>w).length;
+  document.getElementById('char-count').textContent = words + (words === 1 ? ' word' : ' words');
+  autoResize();
+});
+
+userInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
+});
+
+function autoResize() {
+  userInput.style.height = 'auto';
+  userInput.style.height = Math.min(userInput.scrollHeight, 180) + 'px';
+}
+
+function scrollBottom() {
+  setTimeout(() => chatWindow.scrollTo({ top: chatWindow.scrollHeight, behavior: 'smooth' }), 80);
+}
+
+function addMessage(role, htmlContent, delay = 0) {
+  return new Promise(resolve => {
+    setTimeout(() => {
+      const msg = document.createElement('div');
+      msg.className = `msg ${role}`;
+
+      const av = document.createElement('div');
+      av.className = role === 'ai' ? 'avatar ai' : 'avatar user-av';
+      av.textContent = role === 'ai' ? 'ψ' : 'YOU';
+
+      const bubble = document.createElement('div');
+      bubble.className = 'bubble';
+      bubble.innerHTML = htmlContent;
+
+      msg.appendChild(av);
+      msg.appendChild(bubble);
+      chatWindow.appendChild(msg);
+      scrollBottom();
+      resolve(msg);
+    }, delay);
+  });
+}
+
+function showTyping() {
+  const msg = document.createElement('div');
+  msg.className = 'msg ai';
+  msg.id = 'typing-indicator';
+
+  const av = document.createElement('div');
+  av.className = 'avatar ai';
+  av.textContent = 'ψ';
+
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble';
+  bubble.innerHTML = '<div class="typing-dots"><span></span><span></span><span></span></div>';
+
+  msg.appendChild(av);
+  msg.appendChild(bubble);
+  chatWindow.appendChild(msg);
+  scrollBottom();
+}
+
+function removeTyping() {
+  const t = document.getElementById('typing-indicator');
+  if (t) t.remove();
+}
+
+// ─────────────────────────────────────────────
+//  INITIAL GREETING
+// ─────────────────────────────────────────────
+
+async function startChat() {
+  showTyping();
+  await new Promise(r => setTimeout(r, 1200));
+  removeTyping();
+
+  await addMessage('ai', `
+    <div class="intro-quote">
+      "Every word you write is a window into who you are."
+    </div>
+    <p style="margin-top:0.8rem;">Welcome to <strong>PsycheScope</strong> — a personality intelligence tool built on the science of language.</p>
+    <p style="margin-top:0.6rem;">Did you know that <em>the way you write</em> — the words you choose, how you structure sentences, even your use of punctuation — reveals deep patterns about your personality?</p>
+    <p style="margin-top:0.6rem;">I'll analyze your text using the <strong>Big Five (OCEAN) model</strong> — the gold standard in personality psychology used by researchers worldwide:</p>
+    <div class="ocean-pills" style="margin-top:0.8rem;">
+      <span class="ocean-pill">🔭 Openness</span>
+      <span class="ocean-pill">📋 Conscientiousness</span>
+      <span class="ocean-pill">⚡ Extraversion</span>
+      <span class="ocean-pill">🤝 Agreeableness</span>
+      <span class="ocean-pill">🌊 Neuroticism</span>
+    </div>
+  `);
+
+  await new Promise(r => setTimeout(r, 400));
+
+  showTyping();
+  await new Promise(r => setTimeout(r, 1000));
+  removeTyping();
+
+  await addMessage('ai', `
+    <p>To get started, just <strong>write freely in the box below</strong>. It could be:</p>
+    <ul style="margin-top:0.5rem;margin-left:1rem;line-height:2;font-size:0.88rem;color:#555;">
+      <li>A few sentences about your day or week</li>
+      <li>Your thoughts on something you care about</li>
+      <li>A short description of yourself or your dreams</li>
+      <li>Literally anything — stream of consciousness works best!</li>
+    </ul>
+    <p style="margin-top:0.8rem;font-size:0.85rem;color:var(--muted);">Tip: The more you write (30+ words), the more accurate your analysis will be. ✍️</p>
+  `);
+}
+
+// ─────────────────────────────────────────────
+//  HANDLE SEND
+// ─────────────────────────────────────────────
+
+async function handleSend() {
+  const text = userInput.value.trim();
+  if (!text || text.split(/\s+/).length < 5) {
+    userInput.placeholder = 'Please write at least a few sentences for a meaningful analysis...';
+    userInput.focus();
+    return;
+  }
+
+  sendBtn.disabled = true;
+  userInput.value = '';
+  document.getElementById('char-count').textContent = '0 words';
+  userInput.style.height = 'auto';
+
+  await addMessage('user', `<p>${text.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</p>`);
+
+  showTyping();
+  await new Promise(r => setTimeout(r, 800));
+  removeTyping();
+
+  await addMessage('ai', `<p>Fascinating. Let me read between the lines of your words... 🔍</p>`);
+
+  showTyping();
+  await new Promise(r => setTimeout(r, 1400));
+  removeTyping();
+
+  // Compute scores
+  const f = extractFeatures(text);
+  const scores = scoreTraits(f);
+  analysisCount++;
+
+  // Build results
+  const traits = [
+    { key:'O', score: scores.O },
+    { key:'C', score: scores.C },
+    { key:'E', score: scores.E },
+    { key:'A', score: scores.A },
+    { key:'N', score: scores.N },
+  ];
+
+  // Personality headline
+  const topTrait = traits.reduce((a,b) => a.score > b.score ? a : b);
+  const topMeta  = TRAIT_META[topTrait.key];
+  const topData  = topTrait.score >= 55 ? topMeta.high : topMeta.low;
+
+  await addMessage('ai', `
+    <p>Your text has been analyzed across <strong>12 linguistic dimensions</strong> — ${f.totalWords} words, ${f.totalSentences} sentences, vocabulary richness, emotional tone, and more.</p>
+    <p style="margin-top:0.6rem;">Your dominant personality signature is: <strong style="color:var(--accent)">${topData.label}</strong></p>
+    <p style="margin-top:0.4rem;font-size:0.85rem;color:var(--muted)">Scroll down to see your full Big Five breakdown ↓</p>
+  `);
+
+  // Build trait cards
+  await new Promise(r => setTimeout(r, 400));
+
+  const gridMsg = document.createElement('div');
+  gridMsg.className = 'msg ai';
+  gridMsg.style.flexDirection = 'column';
+
+  const gridWrap = document.createElement('div');
+  gridWrap.style.cssText = 'width:100%;padding-left:48px;';
+
+  const grid = document.createElement('div');
+  grid.className = 'trait-grid';
+
+  traits.forEach(({key, score}) => {
+    const meta = TRAIT_META[key];
+    const isHigh = score >= 55;
+    const data = isHigh ? meta.high : meta.low;
+    const barClass = score >= 65 ? 'fill-high' : score >= 45 ? 'fill-mid' : 'fill-low';
+
+    const card = document.createElement('div');
+    card.className = 'trait-card';
+    card.innerHTML = `
+      <div class="trait-header">
+        <div class="trait-name">${meta.name}</div>
+        <span class="trait-badge ${isHigh ? 'badge-high' : 'badge-low'}">${isHigh ? 'High' : 'Low'}</span>
+      </div>
+      <div class="trait-pct">${score}% — ${data.label}</div>
+      <div class="trait-bar-bg">
+        <div class="trait-bar-fill ${barClass}" data-width="${score}" style="width:0%"></div>
+      </div>
+      <div class="trait-desc">${data.desc}</div>
+    `;
+    grid.appendChild(card);
+  });
+
+  gridWrap.appendChild(grid);
+  gridMsg.appendChild(gridWrap);
+  chatWindow.appendChild(gridMsg);
+  scrollBottom();
+
+  // Animate bars
+  setTimeout(() => {
+    document.querySelectorAll('.trait-bar-fill').forEach(bar => {
+      bar.style.width = bar.dataset.width + '%';
+    });
+  }, 100);
+
+  // Detailed analysis message
+  await new Promise(r => setTimeout(r, 600));
+  showTyping();
+  await new Promise(r => setTimeout(r, 1200));
+  removeTyping();
+
+  // Build full analysis
+  const allStrengths = traits.flatMap(({key, score}) => {
+    const data = score >= 55 ? TRAIT_META[key].high : TRAIT_META[key].low;
+    return data.strengths.slice(0,2);
+  });
+
+  const careerInsights = traits.map(({key, score}) => {
+    const data = score >= 55 ? TRAIT_META[key].high : TRAIT_META[key].low;
+    return `<li><strong>${TRAIT_META[key].name}:</strong> ${data.career}</li>`;
+  }).join('');
+
+  const watchOuts = traits.map(({key, score}) => {
+    const data = score >= 55 ? TRAIT_META[key].high : TRAIT_META[key].low;
+    return `<li>${data.watchout}</li>`;
+  }).join('');
+
+  await addMessage('ai', `
+    <div class="summary-box">
+      <h3>Your Personality Profile — Deep Dive</h3>
+      <p>You scored highest in <strong style="color:var(--gold)">${topMeta.full}</strong>. ${topData.desc}</p>
+      <div class="strengths-list">
+        ${allStrengths.map(s => `<span class="strength-tag">${s}</span>`).join('')}
+      </div>
+    </div>
+  `);
+
+  await new Promise(r => setTimeout(r, 400));
+
+  await addMessage('ai', `
+    <p><strong>💼 Career & Work Style</strong></p>
+    <ul style="margin-top:0.5rem;margin-left:1rem;line-height:2;font-size:0.85rem;color:var(--muted)">
+      ${careerInsights}
+    </ul>
+  `);
+
+  await new Promise(r => setTimeout(r, 400));
+  showTyping();
+  await new Promise(r => setTimeout(r, 900));
+  removeTyping();
+
+  await addMessage('ai', `
+    <p><strong>❤️ Relationships & Social Life</strong></p>
+    <ul style="margin-top:0.5rem;margin-left:1rem;line-height:2;font-size:0.85rem;color:var(--muted)">
+      ${traits.map(({key,score}) => {
+        const data = score >= 55 ? TRAIT_META[key].high : TRAIT_META[key].low;
+        return `<li><strong>${TRAIT_META[key].name}:</strong> ${data.relationship}</li>`;
+      }).join('')}
+    </ul>
+  `);
+
+  await new Promise(r => setTimeout(r, 400));
+  showTyping();
+  await new Promise(r => setTimeout(r, 900));
+  removeTyping();
+
+  await addMessage('ai', `
+    <p><strong>🌱 Areas to Grow</strong></p>
+    <ul style="margin-top:0.5rem;margin-left:1rem;line-height:2;font-size:0.85rem;color:var(--muted)">
+      ${watchOuts}
+    </ul>
+    <p style="margin-top:0.8rem;font-size:0.82rem;color:var(--muted);border-top:1px solid var(--border);padding-top:0.7rem;">
+      ✨ Want to explore further? Write another piece of text — perhaps something more emotional, or more professional — and see how your personality profile shifts.
+    </p>
+  `);
+
+  sendBtn.disabled = false;
+  userInput.focus();
+}
+
+// ─────────────────────────────────────────────
+//  RESET
+// ─────────────────────────────────────────────
+
+function resetChat() {
+  chatWindow.innerHTML = '';
+  analysisCount = 0;
+  sendBtn.disabled = false;
+  userInput.value = '';
+  document.getElementById('char-count').textContent = '0 words';
+  startChat();
+}
+
+// ── Boot ──
+startChat();
+</script>
+</body>
+</html>
