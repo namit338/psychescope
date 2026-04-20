@@ -11,4 +11,3 @@ Each of these features gets mapped to trait scores using weighted rules based on
 Vanilla JS + HTML/CSS Custom NLP pipeline (no external ML libraries) Rule-based scoring system mapped to OCEAN traits Deployed on GitHub Pages
 
 Why no ML model? Honestly, I wanted to understand what the model would be learning before just plugging in a black box. Building the rule-based system first forced me to actually think through which linguistic features map to which traits and why. It's not as accurate as a trained classifier would be, but it's fully explainable — I know exactly why it gives a certain score. A trained model is probably the next step.
-
